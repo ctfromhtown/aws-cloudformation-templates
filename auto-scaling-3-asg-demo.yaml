@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AWS CloudFormation template to create a demo environment with Auto Scaling Groups in the default VPC'
+Description: 'AWS CloudFormation template to create a demo environment with 3 Auto Scaling Groups in the default VPC'
 
 Resources:
   # Launch Template for Auto Scaling Groups
