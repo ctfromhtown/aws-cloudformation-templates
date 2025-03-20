@@ -1,0 +1,192 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CloudFormation template to create a demo environment with three Auto Scaling Groups, each with its own Launch Template and Target Group.'
+
+Resources:
+
+  # Security Group for EC2 instances
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP and SSH
+      VpcId: !Ref DefaultVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  # Launch Template for ASG1
+  LaunchTemplate1:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: ASG1-LaunchTemplate
+      LaunchTemplateData:
+        ImageId: ami-0c55b159cbfafe1f0  # Amazon Linux 2 AMI (HVM), Kernel 5.10, SSD Volume Type
+        InstanceType: t2.micro  # Free tier eligible
+        SecurityGroupIds:
+          - !Ref InstanceSecurityGroup
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            yum update -y
+            yum install -y httpd
+            systemctl start httpd
+            systemctl enable httpd
+            echo "<h1>Welcome to ASG1 - $(hostname)</h1>" > /var/www/html/index.html
+
+  # Launch Template for ASG2
+  LaunchTemplate2:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: ASG2-LaunchTemplate
+      LaunchTemplateData:
+        ImageId: ami-0c55b159cbfafe1f0
+        InstanceType: t2.micro
+        SecurityGroupIds:
+          - !Ref InstanceSecurityGroup
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            yum update -y
+            yum install -y httpd
+            systemctl start httpd
+            systemctl enable httpd
+            echo "<h1>Welcome to ASG2 - $(hostname)</h1>" > /var/www/html/index.html
+
+  # Launch Template for ASG3
+  LaunchTemplate3:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: ASG3-LaunchTemplate
+      LaunchTemplateData:
+        ImageId: ami-0c55b159cbfafe1f0
+        InstanceType: t2.micro
+        SecurityGroupIds:
+          - !Ref InstanceSecurityGroup
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            yum update -y
+            yum install -y httpd
+            systemctl start httpd
+            systemctl enable httpd
+            echo "<h1>Welcome to ASG3 - $(hostname)</h1>" > /var/www/html/index.html
+
+  # Target Group for ASG1
+  TargetGroup1:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref DefaultVPC
+      Protocol: HTTP
+      Port: 80
+      TargetType: instance
+
+  # Target Group for ASG2
+  TargetGroup2:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref DefaultVPC
+      Protocol: HTTP
+      Port: 80
+      TargetType: instance
+
+  # Target Group for ASG3
+  TargetGroup3:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref DefaultVPC
+      Protocol: HTTP
+      Port: 80
+      TargetType: instance
+
+  # Auto Scaling Group 1
+  AutoScalingGroup1:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: ASG1
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate1
+        Version: !GetAtt LaunchTemplate1.LatestVersionNumber
+      MinSize: '1'
+      MaxSize: '3'
+      DesiredCapacity: '1'
+      VPCZoneIdentifier: !Ref DefaultSubnetIds
+      TargetGroupARNs:
+        - !Ref TargetGroup1
+
+  # Auto Scaling Group 2
+  AutoScalingGroup2:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: ASG2
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate2
+        Version: !GetAtt LaunchTemplate2.LatestVersionNumber
+      MinSize: '1'
+      MaxSize: '3'
+      DesiredCapacity: '1'
+      VPCZoneIdentifier: !Ref DefaultSubnetIds
+      TargetGroupARNs:
+        - !Ref TargetGroup2
+
+  # Auto Scaling Group 3
+  AutoScalingGroup3:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: ASG3
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate3
+        Version: !GetAtt LaunchTemplate3.LatestVersionNumber
+      MinSize: '1'
+      MaxSize: '3'
+      DesiredCapacity: '1'
+      VPCZoneIdentifier: !Ref DefaultSubnetIds
+      TargetGroupARNs:
+        - !Ref TargetGroup3
+
+  # Application Load Balancer
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: AutoScalingDemoLB
+      Subnets: !Ref DefaultSubnetIds
+      SecurityGroups:
+        - !Ref InstanceSecurityGroup
+      Scheme: internet-facing
+      Type: application
+
+  # Load Balancer Listener with ForwardConfig to route traffic to all three target groups
+  LoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Protocol: HTTP
+      Port: 80
+      DefaultActions:
+        - Type: forward
+          ForwardConfig:
+            TargetGroups:
+              - TargetGroupArn: !Ref TargetGroup1
+                Weight: 1
+              - TargetGroupArn: !Ref TargetGroup2
+                Weight: 1
+              - TargetGroupArn: !Ref TargetGroup3
+                Weight: 1
+
+  # Parameters for Dynamic Resource Lookup
+  DefaultVPC:
+    Type: AWS::EC2::VPC::Id
+    Description: Default VPC
+
+  DefaultSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Default VPC Subnet IDs
+
+Outputs:
+  LoadBalancerDNS:
+    Description: Load Balancer DNS Name
+    Value: !GetAtt LoadBalancer.DNSName
