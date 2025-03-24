@@ -1,7 +1,31 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'AWS CloudFormation template to create a demo environment with three Auto Scaling Groups, each with its own Launch Template and Target Group.'
 
+Parameters:
+
+  # Parameters for Dynamic Resource Lookup
+  DefaultVPC:
+    Type: AWS::EC2::VPC::Id
+    Description: Default VPC
+
+  DefaultSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Default VPC Subnet IDs
+
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+
 Resources:
+  # Parameter Store for SpringbootAMI
+  SpringbootAMIParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: SpringbootAMI
+      Type: String
+      Value: ami-0520f976ad2e6300c
+      DataType: aws:ec2:image
+      Tier: Standard
 
   # Security Group for EC2 instances
   InstanceSecurityGroup:
@@ -25,7 +49,7 @@ Resources:
     Properties:
       LaunchTemplateName: ASG1-LaunchTemplate
       LaunchTemplateData:
-        ImageId: ami-0c55b159cbfafe1f0  # Amazon Linux 2 AMI (HVM), Kernel 5.10, SSD Volume Type
+        ImageId: !Ref LatestAmiId  # Amazon Linux 2 AMI (HVM), Kernel 5.10, SSD Volume Type
         InstanceType: t2.micro  # Free tier eligible
         SecurityGroupIds:
           - !Ref InstanceSecurityGroup
@@ -44,7 +68,7 @@ Resources:
     Properties:
       LaunchTemplateName: ASG2-LaunchTemplate
       LaunchTemplateData:
-        ImageId: ami-0c55b159cbfafe1f0
+        ImageId: !Ref LatestAmiId
         InstanceType: t2.micro
         SecurityGroupIds:
           - !Ref InstanceSecurityGroup
@@ -63,7 +87,7 @@ Resources:
     Properties:
       LaunchTemplateName: ASG3-LaunchTemplate
       LaunchTemplateData:
-        ImageId: ami-0c55b159cbfafe1f0
+        ImageId: !Ref LatestAmiId
         InstanceType: t2.micro
         SecurityGroupIds:
           - !Ref InstanceSecurityGroup
@@ -117,6 +141,10 @@ Resources:
       VPCZoneIdentifier: !Ref DefaultSubnetIds
       TargetGroupARNs:
         - !Ref TargetGroup1
+      Tags:
+        - Key: EnhancedASGImageUpgradeAutomation/AmiIdParameter
+          PropagateAtLaunch: true
+          Value: SpringbootAMI
 
   # Auto Scaling Group 2
   AutoScalingGroup2:
@@ -132,6 +160,10 @@ Resources:
       VPCZoneIdentifier: !Ref DefaultSubnetIds
       TargetGroupARNs:
         - !Ref TargetGroup2
+      Tags:
+        - Key: EnhancedASGImageUpgradeAutomation/AmiIdParameter
+          PropagateAtLaunch: true
+          Value: SpringbootAMI
 
   # Auto Scaling Group 3
   AutoScalingGroup3:
@@ -147,6 +179,10 @@ Resources:
       VPCZoneIdentifier: !Ref DefaultSubnetIds
       TargetGroupARNs:
         - !Ref TargetGroup3
+      Tags:
+        - Key: EnhancedASGImageUpgradeAutomation/AmiIdParameter
+          PropagateAtLaunch: true
+          Value: SpringbootAMI
 
   # Application Load Balancer
   LoadBalancer:
@@ -176,15 +212,6 @@ Resources:
                 Weight: 1
               - TargetGroupArn: !Ref TargetGroup3
                 Weight: 1
-
-  # Parameters for Dynamic Resource Lookup
-  DefaultVPC:
-    Type: AWS::EC2::VPC::Id
-    Description: Default VPC
-
-  DefaultSubnetIds:
-    Type: List<AWS::EC2::Subnet::Id>
-    Description: Default VPC Subnet IDs
 
 Outputs:
   LoadBalancerDNS:
