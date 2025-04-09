@@ -142,9 +142,9 @@ Resources:
       TargetGroupARNs:
         - !Ref TargetGroup1
       Tags:
-        - Key: EnhancedASGImageUpgradeAutomation/AmiIdParameter
+        - Key: ApplicationComponent
           PropagateAtLaunch: true
-          Value: SpringbootAMI
+          Value: Springboot
 
   # Auto Scaling Group 2
   AutoScalingGroup2:
@@ -161,9 +161,9 @@ Resources:
       TargetGroupARNs:
         - !Ref TargetGroup2
       Tags:
-        - Key: EnhancedASGImageUpgradeAutomation/AmiIdParameter
+        - Key: ApplicationComponent
           PropagateAtLaunch: true
-          Value: SpringbootAMI
+          Value: Springboot
 
   # Auto Scaling Group 3
   AutoScalingGroup3:
@@ -180,9 +180,9 @@ Resources:
       TargetGroupARNs:
         - !Ref TargetGroup3
       Tags:
-        - Key: EnhancedASGImageUpgradeAutomation/AmiIdParameter
+        - Key: ApplicationComponent
           PropagateAtLaunch: true
-          Value: SpringbootAMI
+          Value: Springboot
 
   # Application Load Balancer
   LoadBalancer:
